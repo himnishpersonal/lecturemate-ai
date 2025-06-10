@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 from .api.lectures import router as lectures_router
+from .api import folders
 import os
 
 app = FastAPI(
@@ -23,6 +24,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(lectures_router, prefix="/api", tags=["lectures"])
+app.include_router(folders.router, prefix="/api")
 
 # Create uploads directory if it doesn't exist
 os.makedirs("local_uploads", exist_ok=True)
