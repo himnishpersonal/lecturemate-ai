@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, Plus, Clock, FileAudio, Calendar, Filter, Check, Upload, RefreshCw } from "lucide-react"
+import { Search, Plus, Clock, FileAudio, Calendar, Filter, Check, Upload, RefreshCw, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,10 +14,13 @@ interface DashboardProps {
   error: string | null
   onLectureSelect: (lecture: Lecture) => void
   onUploadClick: () => void
+  onBack?: () => void
+  selectedFolderId?: string | null
 }
 
-export function Dashboard({ lectures, loading, error, onLectureSelect, onUploadClick }: DashboardProps) {
+export function Dashboard({ lectures, loading, error, onLectureSelect, onUploadClick, onBack, selectedFolderId }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState("")
+  const [folderName, setFolderName] = useState<string>("")
   const [filteredLectures, setFilteredLectures] = useState<Lecture[]>([])
   const [hasProcessingLectures, setHasProcessingLectures] = useState(false)
 
@@ -71,6 +74,24 @@ export function Dashboard({ lectures, loading, error, onLectureSelect, onUploadC
     }
   }, [lectures, searchQuery])
 
+  // Fetch folder name when component mounts or selectedFolderId changes
+  useEffect(() => {
+    const fetchFolderName = async () => {
+      if (selectedFolderId) {
+        try {
+          const response = await fetch(`http://localhost:8000/api/folders/${selectedFolderId}`)
+          if (!response.ok) throw new Error("Failed to fetch folder")
+          const folder = await response.json()
+          setFolderName(folder.name)
+        } catch (err) {
+          console.error("Error fetching folder:", err)
+        }
+      }
+    }
+
+    fetchFolderName()
+  }, [selectedFolderId])
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
@@ -102,12 +123,12 @@ export function Dashboard({ lectures, loading, error, onLectureSelect, onUploadC
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <div className="text-red-600 mb-4">{error}</div>
-        <button
+        <Button
           onClick={onUploadClick}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="bg-blue-600 hover:bg-blue-700 text-white"
         >
           Upload New Lecture
-        </button>
+        </Button>
       </div>
     )
   }
@@ -118,12 +139,12 @@ export function Dashboard({ lectures, loading, error, onLectureSelect, onUploadC
         <Upload className="h-12 w-12 text-gray-400 mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">No lectures yet</h3>
         <p className="text-gray-600 mb-4">Upload your first lecture to get started</p>
-        <button
+        <Button
           onClick={onUploadClick}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="bg-blue-600 hover:bg-blue-700 text-white"
         >
           Upload Lecture
-        </button>
+        </Button>
       </div>
     )
   }
@@ -147,36 +168,56 @@ export function Dashboard({ lectures, loading, error, onLectureSelect, onUploadC
   }
 
   return (
-    <div className="flex-1 space-y-8 p-8">
-      {/* Header */}
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600 mt-1">Manage your lecture recordings and notes</p>
+    <div className="flex-1 space-y-8 p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <div>
+          <div className="flex items-center gap-2">
+            {onBack && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                onClick={onBack}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <h2 className="text-3xl font-bold tracking-tight">
+              {selectedFolderId ? folderName : "Dashboard"}
+            </h2>
           </div>
-          <Button onClick={onUploadClick} className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Upload New Lecture
+          <p className="text-muted-foreground">
+            {selectedFolderId 
+              ? `Manage lectures in ${folderName}`
+              : "Manage your lectures and recordings"}
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            onClick={onUploadClick}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Upload Lecture
           </Button>
         </div>
+      </div>
 
-        {/* Search and Filter */}
-        <div className="flex gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search lectures..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Button variant="outline" className="gap-2">
-            <Filter className="h-4 w-4" />
-            Filter
-          </Button>
+      {/* Search and Filter */}
+      <div className="flex gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Search lectures..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
         </div>
+        <Button variant="outline" className="gap-2">
+          <Filter className="h-4 w-4" />
+          Filter
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -294,7 +335,7 @@ export function Dashboard({ lectures, loading, error, onLectureSelect, onUploadC
             {searchQuery ? "Try adjusting your search terms" : "Upload your first lecture to get started"}
           </p>
           {!searchQuery && (
-            <Button onClick={onUploadClick} className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+            <Button onClick={onUploadClick} className="bg-blue-600 hover:bg-blue-700 text-white">
               <Plus className="h-4 w-4 mr-2" />
               Upload Lecture
             </Button>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { BookOpen, Upload, Search, Settings, Home, FileText, Brain, Zap, Sun, Moon } from "lucide-react"
+import { BookOpen, Upload, Search, Settings, Home, FileText, Brain, Zap, Sun, Moon, FolderOpen, LayoutDashboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
 import {
@@ -16,16 +16,25 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { cn } from "@/lib/utils"
 
 interface AppSidebarProps {
   onUploadClick: () => void
   onDashboardClick: () => void
+  onFoldersClick: () => void
   onSearchClick: () => void
   onNotesClick: () => void
-  currentView: "dashboard" | "lecture" | "search" | "notes"
+  currentView: "overview" | "folders" | "folder" | "lecture" | "search" | "notes"
 }
 
-export function AppSidebar({ onUploadClick, onDashboardClick, onSearchClick, onNotesClick, currentView }: AppSidebarProps) {
+export function AppSidebar({
+  onUploadClick,
+  onDashboardClick,
+  onFoldersClick,
+  onSearchClick,
+  onNotesClick,
+  currentView,
+}: AppSidebarProps) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
@@ -56,15 +65,21 @@ export function AppSidebar({ onUploadClick, onDashboardClick, onSearchClick, onN
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={onDashboardClick} isActive={currentView === "dashboard"} className="w-full">
-                  <Home className="h-4 w-4" />
+                <SidebarMenuButton onClick={onDashboardClick} isActive={currentView === "overview" || currentView === "folders" || currentView === "folder"} className="w-full">
+                  <LayoutDashboard className="h-4 w-4" />
                   <span>Dashboard</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={onFoldersClick} isActive={currentView === "folders" || currentView === "folder"} className="w-full">
+                  <FolderOpen className="h-4 w-4" />
+                  <span>My Folders</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={onSearchClick} isActive={currentView === "search"} className="w-full">
                   <Search className="h-4 w-4" />
-                  <span>Search Lectures</span>
+                  <span>Search</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -80,8 +95,8 @@ export function AppSidebar({ onUploadClick, onDashboardClick, onSearchClick, onN
         <SidebarGroup>
           <SidebarGroupLabel>Quick Actions</SidebarGroupLabel>
           <SidebarGroupContent>
-            <Button onClick={onUploadClick} className="w-full justify-start gap-2 bg-blue-600 hover:bg-blue-700">
-              <Upload className="h-4 w-4" />
+            <Button onClick={onUploadClick} className="w-full mb-4 bg-blue-600 hover:bg-blue-700 text-white">
+              <Upload className="h-4 w-4 mr-2" />
               Upload Lecture
             </Button>
           </SidebarGroupContent>

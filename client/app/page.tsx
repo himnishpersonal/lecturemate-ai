@@ -6,12 +6,17 @@ import { Dashboard } from "@/components/dashboard"
 import { LectureView } from "@/components/lecture-view"
 import { SearchLectures } from "@/components/search-lectures"
 import { MyNotes } from "@/components/my-notes"
+import { FolderView } from "@/components/folder-view"
+import { OverviewDashboard } from "@/components/overview-dashboard"
 import { UploadModal } from "@/components/upload-modal"
 import { AppSidebar } from "@/components/app-sidebar"
 
+type View = "overview" | "folders" | "folder" | "lecture" | "search" | "notes"
+
 export default function Home() {
-  const [currentView, setCurrentView] = useState<"dashboard" | "lecture" | "search" | "notes">("dashboard")
+  const [currentView, setCurrentView] = useState<View>("overview")
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null)
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [isUploadOpen, setIsUploadOpen] = useState(false)
   const [lectures, setLectures] = useState<Lecture[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,9 +43,20 @@ export default function Home() {
     setCurrentView("lecture")
   }
 
-  const handleBackToDashboard = () => {
-    setCurrentView("dashboard")
-    setSelectedLecture(null)
+  const handleFolderSelect = (folderId: string) => {
+    setSelectedFolderId(folderId)
+    setCurrentView("folder")
+  }
+
+  const handleBack = () => {
+    if (currentView === "lecture" && selectedFolderId) {
+      setCurrentView("folder")
+      setSelectedLecture(null)
+    } else {
+      setCurrentView("overview")
+      setSelectedLecture(null)
+      setSelectedFolderId(null)
+    }
   }
 
   const handleUploadSuccess = async () => {
@@ -56,37 +72,48 @@ export default function Home() {
     }
   }
 
-  const handleViewChange = (view: typeof currentView) => {
-    setCurrentView(view)
-    if (view !== "lecture") {
-      setSelectedLecture(null)
-    }
+  const getFolderLectures = (folderId: string) => {
+    return lectures.filter(lecture => lecture.folder_id === folderId)
   }
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
       <AppSidebar
         onUploadClick={() => setIsUploadOpen(true)}
-        onDashboardClick={() => handleViewChange("dashboard")}
-        onSearchClick={() => handleViewChange("search")}
-        onNotesClick={() => handleViewChange("notes")}
+        onDashboardClick={() => setCurrentView("overview")}
+        onFoldersClick={() => setCurrentView("folders")}
+        onSearchClick={() => setCurrentView("search")}
+        onNotesClick={() => setCurrentView("notes")}
         currentView={currentView}
       />
       <main className="flex-1 overflow-y-auto">
-        {currentView === "dashboard" ? (
+        {currentView === "overview" ? (
+          <OverviewDashboard 
+            onFolderClick={() => setCurrentView("folders")}
+            onUploadClick={() => setIsUploadOpen(true)}
+            onLectureSelect={handleLectureSelect}
+          />
+        ) : currentView === "folders" ? (
+          <FolderView 
+            onFolderSelect={handleFolderSelect}
+            onUploadClick={() => setIsUploadOpen(true)}
+          />
+        ) : currentView === "folder" && selectedFolderId ? (
           <Dashboard 
-            lectures={lectures}
+            lectures={getFolderLectures(selectedFolderId)}
             loading={loading}
             error={error}
-            onLectureSelect={handleLectureSelect} 
-            onUploadClick={() => setIsUploadOpen(true)} 
+            onLectureSelect={handleLectureSelect}
+            onUploadClick={() => setIsUploadOpen(true)}
+            onBack={handleBack}
+            selectedFolderId={selectedFolderId}
           />
         ) : currentView === "search" ? (
           <SearchLectures onLectureSelect={handleLectureSelect} />
         ) : currentView === "notes" ? (
           <MyNotes onLectureSelect={handleLectureSelect} />
         ) : selectedLecture ? (
-          <LectureView lecture={selectedLecture} onBack={handleBackToDashboard} />
+          <LectureView lecture={selectedLecture} onBack={handleBack} />
         ) : null}
       </main>
       <UploadModal 
