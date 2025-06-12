@@ -23,19 +23,19 @@ export function LectureView({ lecture, onBack }: LectureViewProps) {
   const [error, setError] = useState<string | null>(null)
   const [fullLecture, setFullLecture] = useState<Lecture | null>(null)
 
-  const fetchLectureDetails = async () => {
-    try {
+    const fetchLectureDetails = async () => {
+      try {
       const data = await getLectureById(String(lecture.id))
-      setFullLecture(data)
+        setFullLecture(data)
       return data.status
-    } catch (err) {
-      setError("Failed to load lecture details")
-      console.error("Error fetching lecture details:", err)
+      } catch (err) {
+        setError("Failed to load lecture details")
+        console.error("Error fetching lecture details:", err)
       return null
-    } finally {
-      setLoading(false)
+      } finally {
+        setLoading(false)
+      }
     }
-  }
 
   useEffect(() => {
     let pollInterval: NodeJS.Timeout | null = null;
@@ -222,18 +222,18 @@ export function LectureView({ lecture, onBack }: LectureViewProps) {
                     {copiedTranscript ? 'Copied!' : 'Copy'}
                   </Button>
                 </div>
-                <div className="prose max-w-none">
-                  {fullLecture.transcript ? (
+              <div className="prose max-w-none">
+                {fullLecture.transcript ? (
                     <p className="whitespace-pre-wrap text-foreground">{fullLecture.transcript}</p>
-                  ) : (
+                ) : (
                     <p className="text-muted-foreground">No transcript available.</p>
-                  )}
-                </div>
+                )}
               </div>
+            </div>
             </TabsContent>
 
             <TabsContent value="notes">
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
                     <Brain className="h-5 w-5 text-muted-foreground" />
@@ -269,14 +269,14 @@ export function LectureView({ lecture, onBack }: LectureViewProps) {
                     </Button>
                   </div>
                 </div>
-                <div className="prose max-w-none">
+              <div className="prose max-w-none">
                   {fullLecture?.notes ? (
                     <div className="text-foreground" dangerouslySetInnerHTML={{ __html: fullLecture.notes }} />
-                  ) : (
+                ) : (
                     <p className="text-muted-foreground">No notes available.</p>
-                  )}
-                </div>
+                )}
               </div>
+            </div>
             </TabsContent>
           </Tabs>
         )}
