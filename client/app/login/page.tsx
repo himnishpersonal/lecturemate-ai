@@ -1,31 +1,95 @@
 'use client'
 
-import { useState } from 'react'
-import { login, signup } from './actions'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useFormState } from 'react-dom'
+import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { login, signup, resendConfirmation } from './actions'
 import { Brain } from 'lucide-react'
-import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [isResending, setIsResending] = useState(false)
+  const [email, setEmail] = useState('')
 
-  const handleSubmit = async (action: typeof login | typeof signup) => {
-    setIsLoading(true)
-    try {
-      const formData = new FormData(document.querySelector('form')!)
-      await action(formData)
-    } catch (error) {
-      console.error('Authentication error:', error)
+  // Use the auth hook to monitor auth state changes
+  useAuth()
+
+  useEffect(() => {
+    const message = searchParams.get('message')
+    const error = searchParams.get('error')
+
+    if (message === 'check-email') {
+      toast({
+        title: 'Check your email',
+        description: 'We sent you a confirmation email. Please check your inbox.',
+      })
+    }
+
+    if (error === 'email-not-verified') {
       toast({
         variant: 'destructive',
-        title: 'Authentication failed',
-        description: error instanceof Error ? error.message : 'Please check your credentials and try again.',
+        title: 'Email not verified',
+        description: 'Please verify your email before logging in. You can request a new confirmation email using the button below.',
       })
+    }
+  }, [searchParams, toast])
+
+  const handleSubmit = async (formData: FormData) => {
+    try {
+      if (isSignUp) {
+        await signup(formData)
+      } else {
+        await login(formData)
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: error.message,
+        })
+      }
+    }
+  }
+
+  const handleResendConfirmation = async () => {
+    if (!email) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Please enter your email address first',
+      })
+      return
+    }
+
+    setIsResending(true)
+    try {
+      const formData = new FormData()
+      formData.append('email', email)
+      const result = await resendConfirmation(formData)
+      toast({
+        title: 'Success',
+        description: result.message,
+      })
+    } catch (error) {
+      if (error instanceof Error) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: error.message,
+        })
+      }
     } finally {
-      setIsLoading(false)
+      setIsResending(false)
     }
   }
 
@@ -46,34 +110,28 @@ export default function LoginPage() {
               Sign in to your account or create a new one
             </CardDescription>
           </CardHeader>
-          <form>
+          <form action={isSignUp ? signup : login}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Email
-                </label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   name="email"
                   type="email"
                   placeholder="Enter your email"
                   required
-                  disabled={isLoading}
-                  className="bg-white text-black placeholder:text-gray-500"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Password
-                </label>
+                <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   name="password"
                   type="password"
                   placeholder="Enter your password"
                   required
-                  disabled={isLoading}
-                  className="bg-white text-black placeholder:text-gray-500"
                 />
               </div>
             </CardContent>
@@ -81,19 +139,28 @@ export default function LoginPage() {
               <Button 
                 type="submit"
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition-all duration-200"
-                onClick={() => handleSubmit(login)}
-                disabled={isLoading}
               >
-                {isLoading ? 'Logging in...' : 'Log in'}
+                {isSignUp ? 'Sign up' : 'Sign in'}
               </Button>
-              <Button 
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition-all duration-200"
-                onClick={() => handleSubmit(signup)}
-                disabled={isLoading}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => setIsSignUp(!isSignUp)}
               >
-                {isLoading ? 'Creating account...' : 'Sign up'}
+                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
               </Button>
+              {!isSignUp && (
+                <Button
+                  type="button"
+                  variant="link"
+                  className="w-full"
+                  onClick={handleResendConfirmation}
+                  disabled={isResending}
+                >
+                  {isResending ? 'Sending...' : 'Resend confirmation email'}
+                </Button>
+              )}
             </CardFooter>
           </form>
         </Card>

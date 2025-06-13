@@ -13,8 +13,9 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - api (API routes)
+     * - auth (auth routes for email confirmation)
      * - login (allow access to login page)
      */
-    '/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api|auth|login|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

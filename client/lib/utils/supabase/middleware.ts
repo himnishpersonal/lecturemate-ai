@@ -1,40 +1,43 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 
 export async function updateSession(request: NextRequest) {
   try {
-    // Check if we're on the login page
+    // Check if we're on auth-related pages
     const isLoginPage = request.nextUrl.pathname === '/login'
     const isAuthCallback = request.nextUrl.pathname === '/auth/callback'
+    const isAuthConfirm = request.nextUrl.pathname === '/auth/confirm'
 
-    // Don't redirect if we're on the auth callback page
-    if (isAuthCallback) {
+    // Don't redirect if we're on auth-related pages
+    if (isAuthCallback || isAuthConfirm) {
       return NextResponse.next()
     }
 
-    // Get the session from Supabase
-    const supabase = createRouteHandlerClient({ cookies })
-    const { data: { session }, error } = await supabase.auth.getSession()
+    // Create middleware client
+    const res = NextResponse.next()
+    const supabase = createMiddlewareClient({ req: request, res })
 
-    // If there's an error getting the session, redirect to login
+    // Get the user from Supabase
+    const { data: { user }, error } = await supabase.auth.getUser()
+
+    // If there's an error getting the user, redirect to login
     if (error) {
-      console.error('Error getting session:', error)
+      console.error('Error getting user:', error)
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    // If there's no session and we're not on the login page, redirect to login
-    if (!session && !isLoginPage) {
+    // If there's no user and we're not on the login page, redirect to login
+    if (!user && !isLoginPage) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    // If we have a session and we're on the login page, redirect to home
-    if (session && isLoginPage) {
+    // If we have a user and we're on the login page, redirect to home
+    if (user && isLoginPage) {
       return NextResponse.redirect(new URL('/', request.url))
     }
 
     // Continue with the request
-    return NextResponse.next()
+    return res
   } catch (error) {
     console.error('Middleware error:', error)
     return NextResponse.redirect(new URL('/login', request.url))

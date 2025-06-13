@@ -13,36 +13,77 @@ export async function login(formData: FormData) {
     throw new Error('Email and password are required')
   }
 
-  const supabase = createRouteHandlerClient({ cookies })
+  const cookieStore = await cookies()
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
 
-  // Try to sign in
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  })
+  try {
+    // Try to sign in
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
 
-  // If we get an email not confirmed error, resend the confirmation email
-  if (error?.message === 'Email not confirmed') {
+    // If we get an email not confirmed error, just show the error
+    if (signInError?.message === 'Email not confirmed') {
+      throw new Error('Please verify your email before logging in. You can request a new confirmation email using the button below.')
+    }
+
+    if (signInError) {
+      console.error('Login error:', signInError)
+      throw signInError
+    }
+
+    // Verify the session was created
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      console.error('Error getting user after login:', userError)
+      throw new Error('Failed to create session. Please try again.')
+    }
+
+    // Successfully logged in
+    revalidatePath('/', 'layout')
+    redirect('/')
+  } catch (error) {
+    console.error('Login error:', error)
+    throw error
+  }
+}
+
+export async function resendConfirmation(formData: FormData) {
+  const email = formData.get('email') as string
+
+  if (!email) {
+    throw new Error('Email is required')
+  }
+
+  const cookieStore = await cookies()
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+
+  try {
     const { error: resendError } = await supabase.auth.resend({
       type: 'signup',
       email,
     })
     
     if (resendError) {
+      if (resendError.message.includes('rate limit')) {
+        // Extract the time from the error message if possible
+        const timeMatch = resendError.message.match(/(\d+) seconds/)
+        const waitTime = timeMatch ? timeMatch[1] : '30'
+        throw new Error(`Please wait ${waitTime} seconds before requesting another confirmation email. Check your inbox for the previous email.`)
+      }
       console.error('Error resending confirmation:', resendError)
-      throw new Error('Failed to resend confirmation email. Please try again.')
+      throw new Error('Failed to resend confirmation email. Please try again later.')
     }
     
-    throw new Error('Please check your email to confirm your account. A new confirmation email has been sent.')
+    return { message: 'Confirmation email sent. Please check your inbox.' }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error('An unexpected error occurred. Please try again later.')
   }
-
-  if (error) {
-    console.error('Login error:', error)
-    throw error
-  }
-
-  revalidatePath('/', 'layout')
-  redirect('/')
 }
 
 export async function signup(formData: FormData) {
@@ -53,19 +94,28 @@ export async function signup(formData: FormData) {
     throw new Error('Email and password are required')
   }
 
-  const supabase = createRouteHandlerClient({ cookies })
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
-    },
-  })
+  const cookieStore = await cookies()
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
 
-  if (error) {
+  try {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm`,
+      },
+    })
+
+    if (error) {
+      console.error('Signup error:', error)
+      throw error
+    }
+
+    // Successfully signed up
+    revalidatePath('/', 'layout')
+    redirect('/login?message=check-email')
+  } catch (error) {
+    console.error('Signup error:', error)
     throw error
   }
-
-  revalidatePath('/', 'layout')
-  redirect('/')
 }
