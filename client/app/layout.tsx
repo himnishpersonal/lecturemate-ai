@@ -26,9 +26,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SidebarProvider>
-            {children}
-          </SidebarProvider>
+        <SidebarProvider>
+          {children}
+        </SidebarProvider>
         </ThemeProvider>
       </body>
     </html>
