@@ -1,9 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { BookOpen, Upload, Search, Settings, Home, FileText, Brain, Zap, Sun, Moon, FolderOpen, LayoutDashboard } from "lucide-react"
+import { BookOpen, Upload, Search, Settings, Home, FileText, Brain, Zap, Sun, Moon, FolderOpen, LayoutDashboard, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
+import { useToast } from "@/hooks/use-toast"
+import { logout } from "@/app/login/actions"
 import {
   Sidebar,
   SidebarContent,
@@ -37,10 +39,27 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      toast({
+        title: "Logged out successfully",
+        description: "See you next time!",
+      })
+    } catch (error) {
+      toast({
+        title: "Error logging out",
+        description: "Please try again",
+        variant: "destructive",
+      })
+    }
+  }
 
   if (!mounted) {
     return null
@@ -153,6 +172,12 @@ export function AppSidebar({
             <SidebarMenuButton>
               <Settings className="h-4 w-4" />
               <span>Settings</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={handleLogout} className="text-red-500 hover:text-red-600">
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

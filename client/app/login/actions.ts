@@ -23,12 +23,18 @@ export async function login(formData: FormData) {
       password,
     })
 
-    // If we get an email not confirmed error, just show the error
-    if (signInError?.message === 'Email not confirmed') {
-      throw new Error('Please verify your email before logging in. You can request a new confirmation email using the button below.')
-    }
-
+    // Handle specific error cases
     if (signInError) {
+      if (signInError.message === 'Email not confirmed') {
+        throw new Error('Please verify your email before logging in. You can request a new confirmation email using the button below.')
+      }
+      if (signInError.message === 'Invalid login credentials') {
+        throw new Error('Incorrect email or password. Please try again.')
+      }
+      if (signInError.message.includes('rate limit')) {
+        throw new Error('Too many login attempts. Please try again in a few minutes.')
+      }
+      
       console.error('Login error:', signInError)
       throw signInError
     }
@@ -116,6 +122,26 @@ export async function signup(formData: FormData) {
     redirect('/login?message=check-email')
   } catch (error) {
     console.error('Signup error:', error)
+    throw error
+  }
+}
+
+export async function logout() {
+  const cookieStore = await cookies()
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+
+  try {
+    const { error } = await supabase.auth.signOut()
+    
+    if (error) {
+      console.error('Logout error:', error)
+      throw error
+    }
+
+    revalidatePath('/', 'layout')
+    redirect('/login')
+  } catch (error) {
+    console.error('Logout error:', error)
     throw error
   }
 }
