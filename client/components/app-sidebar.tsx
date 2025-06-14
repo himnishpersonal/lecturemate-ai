@@ -169,7 +169,7 @@ export function AppSidebar({
       <SidebarFooter className="p-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton>
+            <SidebarMenuButton onClick={() => window.location.href = '/settings'}>
               <Settings className="h-4 w-4" />
               <span>Settings</span>
             </SidebarMenuButton>
