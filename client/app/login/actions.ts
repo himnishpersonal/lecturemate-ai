@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/utils/supabase/server-component'
-import { cookies } from 'next/headers'
 
 export async function login(formData: FormData) {
   const email = formData.get('email') as string
@@ -114,13 +113,13 @@ export async function signup(formData: FormData) {
       throw error
     }
 
-    // Successfully signed up
-    revalidatePath('/', 'layout')
-    redirect('/login?message=check-email')
   } catch (error) {
     console.error('Signup error:', error)
     throw error
   }
+  // Successfully signed up
+  revalidatePath('/', 'layout')
+  redirect('/login?message=check-email')
 }
 
 export async function logout() {
