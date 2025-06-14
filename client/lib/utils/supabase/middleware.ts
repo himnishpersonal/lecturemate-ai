@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 
 export async function updateSession(request: NextRequest) {
   try {
@@ -14,15 +14,36 @@ export async function updateSession(request: NextRequest) {
     }
 
     // Create middleware client
-    const res = NextResponse.next()
-    const supabase = createMiddlewareClient({ req: request, res })
+    let supabaseResponse = NextResponse.next({
+      request,
+    })
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+            supabaseResponse = NextResponse.next({
+              request,
+            })
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
 
     // Get the user from Supabase
     const { data: { user }, error } = await supabase.auth.getUser()
 
     // If there's an error getting the user, redirect to login
     if (error) {
-      console.error('Error getting user:', error)
+      console.error('Middleware, error getting user:', error)
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
@@ -37,7 +58,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     // Continue with the request
-    return res
+    return supabaseResponse
   } catch (error) {
     console.error('Middleware error:', error)
     return NextResponse.redirect(new URL('/login', request.url))

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/utils/supabase/server-component'
 import { cookies } from 'next/headers'
 
 export async function login(formData: FormData) {
@@ -13,8 +13,7 @@ export async function login(formData: FormData) {
     throw new Error('Email and password are required')
   }
 
-  const cookieStore = await cookies()
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+  const supabase = await createClient()
 
   try {
     // Try to sign in
@@ -42,18 +41,18 @@ export async function login(formData: FormData) {
     // Verify the session was created
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    if (userError || !user) {
+    /* if (userError || !user) {
       console.error('Error getting user after login:', userError)
       throw new Error('Failed to create session. Please try again.')
-    }
+    } */
 
-    // Successfully logged in
-    revalidatePath('/', 'layout')
-    redirect('/')
   } catch (error) {
     console.error('Login error:', error)
     throw error
   }
+  // Successfully logged in
+  revalidatePath('/', 'layout')
+  redirect('/')
 }
 
 export async function resendConfirmation(formData: FormData) {
@@ -63,8 +62,7 @@ export async function resendConfirmation(formData: FormData) {
     throw new Error('Email is required')
   }
 
-  const cookieStore = await cookies()
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+  const supabase = await createClient()
 
   try {
     const { error: resendError } = await supabase.auth.resend({
@@ -100,8 +98,7 @@ export async function signup(formData: FormData) {
     throw new Error('Email and password are required')
   }
 
-  const cookieStore = await cookies()
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+  const supabase = await createClient()
 
   try {
     const { error } = await supabase.auth.signUp({
@@ -127,8 +124,7 @@ export async function signup(formData: FormData) {
 }
 
 export async function logout() {
-  const cookieStore = await cookies()
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+  const supabase = await createClient()
 
   try {
     const { error } = await supabase.auth.signOut()
@@ -137,11 +133,11 @@ export async function logout() {
       console.error('Logout error:', error)
       throw error
     }
-
-    revalidatePath('/', 'layout')
-    redirect('/login')
+    
   } catch (error) {
     console.error('Logout error:', error)
     throw error
   }
+  revalidatePath('/', 'layout')
+  redirect('/login')
 }
