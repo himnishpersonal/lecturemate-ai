@@ -33,7 +33,7 @@ export default function SettingsPage() {
       }
 
       const { data, error } = await supabase
-        .from('users')
+        .from('profiles')
         .select('path')
         .eq('id', user.id)
         .single()
@@ -65,24 +65,52 @@ export default function SettingsPage() {
       // Get the directory path
       const path = dirHandle.name // This will get the directory name
 
-      // Store the directory handle for future access
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError || !user) {
-        throw new Error('User not found')
+      // Get the current authenticated user
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+      if (authError || !authUser) {
+        throw new Error('Please log in to set a storage location')
       }
 
-      // Update the path in Supabase
-      const { error } = await supabase
-        .from('users')
-        .update({ path: path })
-        .eq('id', user.id)
+      // Get the profile for the authenticated user
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', authUser.id)
+        .single()
+      
+      if (profileError || !profile) {
+        throw new Error('Could not find user profile')
+      }
+      const user = { id: profile.id }
 
-      if (error) {
-        throw error
+      // Update the path in Supabase
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select()
+        .eq('id', user.id)
+        .single()
+
+      if (fetchError) {
+        // If profile doesn't exist in the profiles table, insert it
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert([{ id: user.id, path: path }])
+        
+        if (insertError) throw insertError
+      } else {
+        // If profile exists, update the path
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ path: path })
+          .eq('id', user.id)
+        
+        if (updateError) throw updateError
       }
 
       // Update local state
       setSelectedPath(path)
+      
+      console.log('Path updated successfully:', path) // Debug log
 
       // Show success message
       toast({
