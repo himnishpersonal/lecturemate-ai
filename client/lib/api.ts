@@ -2,6 +2,16 @@ import { createClient } from '@supabase/supabase-js'
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
+export type Folder = {
+  id: string
+  name: string
+  description: string | null
+  path: string
+  created_at: string
+  updated_at: string
+  lecture_count: number
+}
+
 export type Lecture = {
   id: string
   title: string
@@ -17,42 +27,119 @@ export type Lecture = {
   folder_id: string
 }
 
-export async function uploadLecture(file: File, title: string, description?: string) {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('title', title);
-  if (description) {
-    formData.append('description', description);
-  }
+// Function to normalize paths for the current platform
+export function normalizePath(path: string): string {
+  // Replace backslashes with forward slashes for consistency
+  return path.replace(/\\/g, '/')
+}
 
-  const response = await fetch(`${API_BASE_URL}/lectures/upload`, {
+export async function setStoragePath(userId: string, path: string): Promise<void> {
+  const response = await fetch('http://localhost:8000/api/storage/path', {
     method: 'POST',
-    body: formData,
-  });
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      user_id: userId,
+      path: normalizePath(path),
+    }),
+  })
 
   if (!response.ok) {
-    throw new Error('Failed to upload lecture');
+    throw new Error('Failed to set storage path')
+  }
+}
+
+export async function getFolders(userId: string): Promise<Folder[]> {
+  try {
+    const response = await fetch(`http://localhost:8000/api/folders?user_id=${encodeURIComponent(userId)}`)
+    if (!response.ok) {
+      if (response.status === 404) {
+        return [] // Return empty array if no folders exist
+      }
+      throw new Error('Failed to fetch folders')
+    }
+    const data = await response.json()
+    return data || [] // Return empty array if response is null/undefined
+  } catch (error) {
+    console.error('Error fetching folders:', error)
+    return [] // Return empty array on error
+  }
+}
+
+export async function createFolder(name: string, description: string | undefined, userId: string): Promise<Folder> {
+  const response = await fetch('http://localhost:8000/api/folders', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name,
+      description,
+      user_id: userId
+    }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null)
+    const errorMessage = errorData?.detail || 'Failed to create folder'
+    throw new Error(errorMessage)
   }
 
-  return response.json();
+  return response.json()
+}
+
+export async function deleteFolder(folderId: string, userId: string): Promise<void> {
+  const response = await fetch(`http://localhost:8000/api/folders/${folderId}?user_id=${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null)
+    const errorMessage = errorData?.detail || 'Failed to delete folder'
+    throw new Error(errorMessage)
+  }
 }
 
 export async function getLectures(): Promise<Lecture[]> {
   try {
     const response = await fetch('http://localhost:8000/api/lectures')
-  if (!response.ok) {
+    if (!response.ok) {
       if (response.status === 404) {
-        // Return empty array if no lectures found
-        return []
+        return [] // Return empty array if no lectures exist
       }
       throw new Error('Failed to fetch lectures')
-  }
+    }
     const data = await response.json()
     return data || [] // Return empty array if response is null/undefined
   } catch (error) {
     console.error('Error fetching lectures:', error)
-    throw error
+    return [] // Return empty array on error
   }
+}
+
+export async function uploadLecture(
+  file: File,
+  folderId: string,
+  title?: string,
+  description?: string
+): Promise<Lecture> {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('folder_id', folderId)
+  if (title) formData.append('title', title)
+  if (description) formData.append('description', description)
+
+  const response = await fetch('http://localhost:8000/api/lectures/upload', {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to upload lecture')
+  }
+
+  return response.json()
 }
 
 export async function getLectureById(id: string): Promise<Lecture> {

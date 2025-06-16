@@ -116,14 +116,14 @@ export default function SettingsPage() {
         return
       }
 
-      // Get the directory path
-      const path = dirHandle.name
+      // Get the full directory path using the File System Access API
+      const fullPath = await getDirectoryPath(dirHandle)
 
       // Update the path in the database
-      const result = await updateStoragePath(path, isVerified)
+      const result = await updateStoragePath(fullPath, isVerified)
 
       // Update local state
-      setSelectedPath(path)
+      setSelectedPath(fullPath)
 
       // Show success message
       toast({
@@ -142,6 +142,25 @@ export default function SettingsPage() {
       // Clear pending state
       setPendingDirHandle(null)
       setIsConfirmOpen(false)
+    }
+  }
+
+  // Helper function to get the full directory path
+  async function getDirectoryPath(dirHandle: any): Promise<string> {
+    // This is a workaround since the File System Access API doesn't directly provide paths
+    // We create a temporary file to get its path
+    try {
+      const tempFile = await dirHandle.getFileHandle('temp.txt', { create: true })
+      const file = await tempFile.getFile()
+      const fullPath = file.webkitRelativePath.split('/').slice(0, -1).join('/')
+      
+      // Clean up temp file
+      await dirHandle.removeEntry('temp.txt')
+      
+      return fullPath || dirHandle.name // Fallback to name if path not available
+    } catch (error) {
+      console.warn('Could not get full path, falling back to directory name:', error)
+      return dirHandle.name
     }
   }
 

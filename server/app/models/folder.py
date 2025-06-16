@@ -1,20 +1,28 @@
-from pydantic import BaseModel
-from typing import List
+from pydantic import BaseModel, Field
+from typing import List, Optional
 from datetime import datetime
+from pathlib import Path
 
-class Folder(BaseModel):
-    id: str
+class FolderBase(BaseModel):
     name: str
-    description: str | None = None
+    description: Optional[str] = None
+
+class FolderCreate(FolderBase):
+    pass
+
+class FolderUpdate(FolderBase):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+class Folder(FolderBase):
+    id: str
+    path: str  # Store as string but handle as Path in code
     created_at: datetime
     updated_at: datetime
     lecture_count: int = 0
-    path: str  # Physical path on the file system
-    
-class FolderCreate(BaseModel):
-    name: str
-    description: str | None = None
 
-class FolderUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None 
+    class Config:
+        from_attributes = True
+        json_encoders = {
+            Path: str  # Convert Path objects to strings for JSON serialization
+        } 

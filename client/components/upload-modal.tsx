@@ -14,6 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Upload, Loader2, X } from "lucide-react"
+import { createClient } from '@/lib/utils/supabase/client-component'
+import { getFolders } from '@/lib/api'
 
 interface UploadModalProps {
   isOpen: boolean
@@ -36,27 +38,52 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const [folders, setFolders] = useState<Folder[]>([])
   const [loadingFolders, setLoadingFolders] = useState(true)
   const [dragActive, setDragActive] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+
+  // Get the user ID when component mounts
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient()
+      const { data: { user }, error } = await supabase.auth.getUser()
+      if (error) {
+        console.error('Error fetching user:', error)
+        return
+      }
+      if (user) {
+        setUserId(user.id)
+      }
+    }
+    fetchUser()
+  }, [])
 
   useEffect(() => {
     const fetchFolders = async () => {
+      if (!userId) {
+        setError("User not authenticated")
+        setLoadingFolders(false)
+        return
+      }
+
       try {
-        const response = await fetch("http://localhost:8000/api/folders")
-        if (!response.ok) throw new Error("Failed to fetch folders")
-        const data = await response.json()
+        const data = await getFolders(userId)
         setFolders(data)
-        console.log("Fetched folders:", data)
       } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load folders'
+        if (errorMessage.includes("Storage path not set")) {
+          setError("Please configure your storage location in settings first")
+        } else {
+          setError(errorMessage)
+        }
         console.error("Error fetching folders:", err)
-        setError("Failed to load folders")
       } finally {
         setLoadingFolders(false)
       }
     }
 
-    if (isOpen) {
+    if (isOpen && userId) {
       fetchFolders()
     }
-  }, [isOpen])
+  }, [isOpen, userId])
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -195,6 +222,36 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
     // Log the folder details to verify the selection
     const selectedFolder = folders.find(folder => folder.id === value)
     console.log('Selected folder details:', selectedFolder)
+  }
+
+  // Show error state with link to settings
+  if (error?.includes("Storage path not set")) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Storage Location Required</DialogTitle>
+            <DialogDescription>
+              Please configure your storage location in settings before creating folders or uploading lectures.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                onClose()
+                window.location.href = '/settings'
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Go to Settings
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
   }
 
   return (
