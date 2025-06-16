@@ -21,7 +21,7 @@ class Lecture(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
     duration: int = 0  # in seconds
-    user_id: str
+    user_id: str 
     folder_id: str  # Reference to the folder
 
     class Config:

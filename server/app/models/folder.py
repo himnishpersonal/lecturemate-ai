@@ -9,6 +9,7 @@ class Folder(BaseModel):
     created_at: datetime
     updated_at: datetime
     lecture_count: int = 0
+    path: str  # Physical path on the file system
     
 class FolderCreate(BaseModel):
     name: str

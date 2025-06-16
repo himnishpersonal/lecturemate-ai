@@ -54,7 +54,7 @@ export default function Home() {
       setSelectedLecture(null)
     } else {
       setCurrentView("overview")
-      setSelectedLecture(null)
+    setSelectedLecture(null)
       setSelectedFolderId(null)
     }
   }
@@ -103,8 +103,8 @@ export default function Home() {
             lectures={getFolderLectures(selectedFolderId)}
             loading={loading}
             error={error}
-            onLectureSelect={handleLectureSelect}
-            onUploadClick={() => setIsUploadOpen(true)}
+            onLectureSelect={handleLectureSelect} 
+            onUploadClick={() => setIsUploadOpen(true)} 
             onBack={handleBack}
             selectedFolderId={selectedFolderId}
           />

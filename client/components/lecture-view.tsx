@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Download, Share, Clock, Calendar, FileText, Brain, Copy, Check } from "lucide-react"
+import { ArrowLeft, Download, Share, Clock, Calendar, FileText, Brain, Copy, Check, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { getLectureById, type Lecture, formatDuration, formatDate } from "@/lib/api"
+import { getLectureById, type Lecture, formatDuration, formatDate, readFileContents } from "@/lib/api"
 
 
 interface LectureViewProps {
@@ -22,6 +22,8 @@ export function LectureView({ lecture, onBack }: LectureViewProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [fullLecture, setFullLecture] = useState<Lecture | null>(null)
+  const [transcript, setTranscript] = useState<string | null>(null)
+  const [notes, setNotes] = useState<string | null>(null)
 
     const fetchLectureDetails = async () => {
       try {
@@ -63,6 +65,33 @@ export function LectureView({ lecture, onBack }: LectureViewProps) {
       }
     }
   }, [lecture.id])
+
+  useEffect(() => {
+    const loadContents = async () => {
+      try {
+        setLoading(true)
+        
+        // Load transcript if available
+        if (lecture.transcript) {
+          const transcriptContent = await readFileContents(lecture.transcript)
+          setTranscript(transcriptContent)
+        }
+        
+        // Load notes if available
+        if (lecture.notes) {
+          const notesContent = await readFileContents(lecture.notes)
+          setNotes(notesContent)
+        }
+      } catch (err) {
+        console.error('Error loading lecture contents:', err)
+        setError('Failed to load lecture contents')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadContents()
+  }, [lecture])
 
   const handleCopyTranscript = async () => {
     if (!fullLecture?.transcript) return
@@ -193,20 +222,65 @@ export function LectureView({ lecture, onBack }: LectureViewProps) {
             </p>
           </div>
         ) : (
-          <Tabs defaultValue="transcript" className="w-full">
+          <Tabs defaultValue="notes" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8">
+              <TabsTrigger value="notes" className="text-lg">
+                <FileText className="h-5 w-5 mr-2" />
+                Notes
+              </TabsTrigger>
               <TabsTrigger value="transcript" className="text-lg">
                 <FileText className="h-5 w-5 mr-2" />
                 Transcript
               </TabsTrigger>
-              <TabsTrigger value="notes" className="text-lg">
-                <Brain className="h-5 w-5 mr-2" />
-                AI Notes
-              </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="transcript">
+            <TabsContent value="notes">
               <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <h2 className="text-xl font-semibold text-foreground">Full Notes</h2>
+                  </div>
+                  <Button
+                    onClick={handleDownloadPDF}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    disabled={!fullLecture?.notes || downloading}
+                  >
+                    {downloading ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-500 border-t-transparent" />
+                        <span>Generating PDF...</span>
+                      </>
+        ) : (
+          <>
+                        <Download className="h-4 w-4" />
+                        <span>Download PDF</span>
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleCopyNotes}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    disabled={!fullLecture?.notes}
+                  >
+                    {copiedNotes ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    {copiedNotes ? 'Copied!' : 'Copy'}
+                  </Button>
+                </div>
+              <div className="prose max-w-none">
+                  {notes ? (
+                    <div className="text-foreground" dangerouslySetInnerHTML={{ __html: notes }} />
+                ) : (
+                    <p className="text-muted-foreground">No notes available.</p>
+                )}
+              </div>
+            </div>
+            </TabsContent>
+
+            <TabsContent value="transcript">
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
                     <FileText className="h-5 w-5 text-muted-foreground" />
@@ -223,57 +297,10 @@ export function LectureView({ lecture, onBack }: LectureViewProps) {
                   </Button>
                 </div>
               <div className="prose max-w-none">
-                {fullLecture.transcript ? (
-                    <p className="whitespace-pre-wrap text-foreground">{fullLecture.transcript}</p>
+                {transcript ? (
+                    <p className="whitespace-pre-wrap text-foreground">{transcript}</p>
                 ) : (
                     <p className="text-muted-foreground">No transcript available.</p>
-                )}
-              </div>
-            </div>
-            </TabsContent>
-
-            <TabsContent value="notes">
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex items-center gap-2">
-                    <Brain className="h-5 w-5 text-muted-foreground" />
-                    <h2 className="text-xl font-semibold text-foreground">AI-Generated Notes</h2>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      onClick={handleDownloadPDF}
-                      variant="outline"
-                      className="flex items-center gap-2"
-                      disabled={!fullLecture?.notes || downloading}
-                    >
-                      {downloading ? (
-                        <>
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-500 border-t-transparent" />
-                          <span>Generating PDF...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Download className="h-4 w-4" />
-                          <span>Download PDF</span>
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      onClick={handleCopyNotes}
-                      variant="outline"
-                      className="flex items-center gap-2"
-                      disabled={!fullLecture?.notes}
-                    >
-                      {copiedNotes ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      {copiedNotes ? 'Copied!' : 'Copy'}
-                    </Button>
-                  </div>
-                </div>
-              <div className="prose max-w-none">
-                  {fullLecture?.notes ? (
-                    <div className="text-foreground" dangerouslySetInnerHTML={{ __html: fullLecture.notes }} />
-                ) : (
-                    <p className="text-muted-foreground">No notes available.</p>
                 )}
               </div>
             </div>

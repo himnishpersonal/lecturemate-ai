@@ -170,7 +170,7 @@ export function Dashboard({ lectures, loading, error, onLectureSelect, onUploadC
   return (
     <div className="flex-1 space-y-8 p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
-        <div>
+      <div>
           <div className="flex items-center gap-2">
             {onBack && (
               <Button
@@ -201,23 +201,23 @@ export function Dashboard({ lectures, loading, error, onLectureSelect, onUploadC
             Upload Lecture
           </Button>
         </div>
-      </div>
-
-      {/* Search and Filter */}
-      <div className="flex gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search lectures..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
         </div>
-        <Button variant="outline" className="gap-2">
-          <Filter className="h-4 w-4" />
-          Filter
-        </Button>
+
+        {/* Search and Filter */}
+        <div className="flex gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search lectures..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button variant="outline" className="gap-2">
+            <Filter className="h-4 w-4" />
+            Filter
+          </Button>
       </div>
 
       {/* Stats Cards */}
