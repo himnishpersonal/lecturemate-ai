@@ -4,8 +4,6 @@ import { useState, useEffect } from "react"
 import { Folder, Plus, MoreVertical, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { createClient } from '@/lib/utils/supabase/client-component'
-import { getFolders, createFolder } from '@/lib/api'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,33 +43,12 @@ export function FolderView({ onFolderSelect, onUploadClick }: FolderViewProps) {
   const [error, setError] = useState<string | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [newFolder, setNewFolder] = useState({ name: "", description: "" })
-  const [userId, setUserId] = useState<string | null>(null)
-
-  // Get the user ID when component mounts
-  useEffect(() => {
-    const fetchUser = async () => {
-      const supabase = createClient()
-      const { data: { user }, error } = await supabase.auth.getUser()
-      if (error) {
-        console.error('Error fetching user:', error)
-        return
-      }
-      if (user) {
-        setUserId(user.id)
-      }
-    }
-    fetchUser()
-  }, [])
 
   const fetchFolders = async () => {
-    if (!userId) {
-      setError("User not authenticated")
-      setLoading(false)
-      return
-    }
-
     try {
-      const data = await getFolders(userId)
+      const response = await fetch("http://localhost:8000/api/folders")
+      if (!response.ok) throw new Error("Failed to fetch folders")
+      const data = await response.json()
       setFolders(data)
     } catch (err) {
       setError("Failed to load folders")
@@ -82,41 +59,32 @@ export function FolderView({ onFolderSelect, onUploadClick }: FolderViewProps) {
   }
 
   useEffect(() => {
-    if (userId) {
-      fetchFolders()
-    }
-  }, [userId])
+    fetchFolders()
+  }, [])
 
   const handleCreateFolder = async () => {
-    if (!userId) {
-      setError("User not authenticated")
-      return
-    }
-
     try {
-      await createFolder(newFolder.name, newFolder.description, userId)
+      const response = await fetch("http://localhost:8000/api/folders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newFolder),
+      })
+
+      if (!response.ok) throw new Error("Failed to create folder")
+
       await fetchFolders()
       setIsCreateOpen(false)
       setNewFolder({ name: "", description: "" })
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create folder'
-      if (errorMessage.includes("Storage path not set")) {
-        setError("Please configure your storage location in settings first")
-      } else {
-        setError(errorMessage)
-      }
       console.error("Error creating folder:", err)
     }
   }
 
   const handleDeleteFolder = async (folderId: string) => {
-    if (!userId) {
-      setError("User not authenticated")
-      return
-    }
-
     try {
-      const response = await fetch(`http://localhost:8000/api/folders/${folderId}?user_id=${encodeURIComponent(userId)}`, {
+      const response = await fetch(`http://localhost:8000/api/folders/${folderId}`, {
         method: "DELETE",
       })
 
@@ -138,16 +106,8 @@ export function FolderView({ onFolderSelect, onUploadClick }: FolderViewProps) {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+      <div className="flex flex-col items-center justify-center h-full">
         <div className="text-red-600 mb-4">{error}</div>
-        {error.includes("Storage path not set") && (
-          <Button
-            onClick={() => window.location.href = '/settings'}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            Configure Storage Location
-          </Button>
-        )}
       </div>
     )
   }

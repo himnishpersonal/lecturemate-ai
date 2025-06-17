@@ -14,8 +14,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Upload, Loader2, X } from "lucide-react"
-import { createClient } from '@/lib/utils/supabase/client-component'
-import { getFolders } from '@/lib/api'
 
 interface UploadModalProps {
   isOpen: boolean
@@ -38,52 +36,27 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const [folders, setFolders] = useState<Folder[]>([])
   const [loadingFolders, setLoadingFolders] = useState(true)
   const [dragActive, setDragActive] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
-
-  // Get the user ID when component mounts
-  useEffect(() => {
-    const fetchUser = async () => {
-      const supabase = createClient()
-      const { data: { user }, error } = await supabase.auth.getUser()
-      if (error) {
-        console.error('Error fetching user:', error)
-        return
-      }
-      if (user) {
-        setUserId(user.id)
-      }
-    }
-    fetchUser()
-  }, [])
 
   useEffect(() => {
     const fetchFolders = async () => {
-      if (!userId) {
-        setError("User not authenticated")
-        setLoadingFolders(false)
-        return
-      }
-
       try {
-        const data = await getFolders(userId)
+        const response = await fetch("http://localhost:8000/api/folders")
+        if (!response.ok) throw new Error("Failed to fetch folders")
+        const data = await response.json()
         setFolders(data)
+        console.log("Fetched folders:", data)
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load folders'
-        if (errorMessage.includes("Storage path not set")) {
-          setError("Please configure your storage location in settings first")
-        } else {
-          setError(errorMessage)
-        }
         console.error("Error fetching folders:", err)
+        setError("Failed to load folders")
       } finally {
         setLoadingFolders(false)
       }
     }
 
-    if (isOpen && userId) {
+    if (isOpen) {
       fetchFolders()
     }
-  }, [isOpen, userId])
+  }, [isOpen])
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -118,13 +91,13 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0]
       if (selectedFile.type.startsWith('audio/') || selectedFile.type === 'video/mp4') {
-      setFile(selectedFile)
+        setFile(selectedFile)
         if (!title) {
           setTitle(selectedFile.name.replace(/\.[^/.]+$/, ""))
         }
-      setError(null)
-    } else {
-      setError('Please upload an audio or MP4 file')
+        setError(null)
+      } else {
+        setError('Please upload an audio or MP4 file')
       }
     }
   }
@@ -224,36 +197,6 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
     console.log('Selected folder details:', selectedFolder)
   }
 
-  // Show error state with link to settings
-  if (error?.includes("Storage path not set")) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Storage Location Required</DialogTitle>
-            <DialogDescription>
-              Please configure your storage location in settings before creating folders or uploading lectures.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                onClose()
-                window.location.href = '/settings'
-              }}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              Go to Settings
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    )
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent>
@@ -265,11 +208,11 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
+          {error && (
             <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
-            {error}
-          </div>
-        )}
+              {error}
+            </div>
+          )}
 
           <div className="space-y-4">
             <div>
@@ -300,9 +243,9 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                   )}
                 </SelectContent>
               </Select>
-              </div>
+            </div>
 
-              <div>
+            <div>
               <Label htmlFor="file">File</Label>
               <div 
                 className={`mt-1 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10 ${
@@ -334,7 +277,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 }}
               >
                 <div className="text-center">
-                {file ? (
+                  {file ? (
                     <div className="flex items-center justify-center space-x-2">
                       <span className="text-sm text-gray-500">{file.name}</span>
                       <Button
@@ -349,7 +292,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-                ) : (
+                  ) : (
                     <div className="space-y-2">
                       <div className="flex items-center justify-center">
                         <Upload className="h-8 w-8 text-gray-500" />
@@ -381,10 +324,10 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                         Audio or video files up to 500MB
                       </p>
                     </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
             <div>
               <Label htmlFor="title">Title</Label>
@@ -410,7 +353,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
 
           <div className="flex justify-end gap-4">
             <Button 
-              type="button"
+              type="button" 
               variant="outline" 
               onClick={handleClose}
               className="text-blue-600 hover:text-blue-700 border-blue-600 hover:border-blue-700"

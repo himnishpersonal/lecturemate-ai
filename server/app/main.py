@@ -3,7 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
-from .api import lectures, folders, files
+from .api.lectures import router as lectures_router
+from .api import folders
 import os
 
 app = FastAPI(
@@ -22,9 +23,8 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(lectures.router, prefix="/api", tags=["lectures"])
-app.include_router(folders.router, prefix="/api", tags=["folders"])
-app.include_router(files.router, prefix="/api", tags=["files"])
+app.include_router(lectures_router, prefix="/api", tags=["lectures"])
+app.include_router(folders.router, prefix="/api")
 
 # Create uploads directory if it doesn't exist
 os.makedirs("local_uploads", exist_ok=True)
