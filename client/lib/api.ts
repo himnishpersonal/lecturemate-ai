@@ -68,15 +68,14 @@ export async function getFolders(userId: string): Promise<Folder[]> {
 }
 
 export async function createFolder(name: string, description: string | undefined, userId: string): Promise<Folder> {
-  const response = await fetch('http://localhost:8000/api/folders', {
+  const response = await fetch(`http://localhost:8000/api/folders?user_id=${encodeURIComponent(userId)}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       name,
-      description,
-      user_id: userId
+      description
     }),
   })
 
