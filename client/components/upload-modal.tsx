@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Upload, Loader2, X } from "lucide-react"
+import type { SubjectCategory } from "@/lib/api"
 
 interface UploadModalProps {
   isOpen: boolean
@@ -33,6 +34,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [folderId, setFolderId] = useState<string>("")
+  const [subjectCategory, setSubjectCategory] = useState<SubjectCategory | "">("")
   const [folders, setFolders] = useState<Folder[]>([])
   const [loadingFolders, setLoadingFolders] = useState(true)
   const [dragActive, setDragActive] = useState(false)
@@ -105,32 +107,24 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    console.log('Form submission state:', {
-      file: file?.name,
-      title,
-      description,
-      folderId,
-      folders
-    })
-
-    if (!file || !folderId) {
-      const errorMsg = !file ? 'Please select a file' : 'Please select a folder'
+    if (!file || !folderId || !subjectCategory) {
+      const errorMsg = !file 
+        ? 'Please select a file' 
+        : !folderId 
+        ? 'Please select a folder'
+        : 'Please select a subject category'
       setError(errorMsg)
-      console.log('Validation error:', errorMsg)
       return
     }
 
     setUploading(true)
     
     try {
-      // Create form data
       const formData = new FormData()
-      
-      // Add file and metadata as form fields
       formData.append("file", file)
-      formData.append("folder_id", folderId)  // This must match the FastAPI Form parameter name
+      formData.append("folder_id", folderId)
+      formData.append("subject_category", subjectCategory)
       
-      // Only append title if it's different from the filename
       if (title && title !== file.name) {
         formData.append("title", title)
       }
@@ -139,37 +133,17 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
         formData.append("description", description)
       }
 
-      // Log form data for debugging
-      console.log('Sending form data:')
-      for (let [key, value] of formData.entries()) {
-        console.log(`${key}:`, value instanceof File ? value.name : value)
-      }
-
       const response = await fetch("http://localhost:8000/api/lectures/upload", {
         method: "POST",
         body: formData
       })
-
-      console.log('Response status:', response.status)
       
       if (!response.ok) {
         const errorData = await response.json()
-        console.error('Upload failed:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData,
-          sentFolderId: folderId
-        })
-        
-        // Get the raw response text for debugging
-        const rawResponse = await response.text()
-        console.log('Raw response:', rawResponse)
-        
         throw new Error(errorData.detail || "Upload failed")
       }
 
       const responseData = await response.json()
-      console.log('Upload successful:', responseData)
       onSuccess()
       handleClose()
     } catch (err) {
@@ -186,6 +160,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
     setDescription("")
     setError(null)
     setFolderId("")
+    setSubjectCategory("")
     onClose()
   }
 
@@ -241,6 +216,28 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                       </SelectItem>
                     ))
                   )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="subject">Subject Category</Label>
+              <Select 
+                value={subjectCategory} 
+                onValueChange={(value: SubjectCategory) => setSubjectCategory(value)}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a subject category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MATHEMATICS">Mathematics</SelectItem>
+                  <SelectItem value="COMPUTER_SCIENCE">Computer Science</SelectItem>
+                  <SelectItem value="SCIENCES">Sciences (Physics, Chemistry, Biology)</SelectItem>
+                  <SelectItem value="HUMANITIES">Humanities (History, Literature, Philosophy, Arts)</SelectItem>
+                  <SelectItem value="SOCIAL_SCIENCES">Social Sciences (Psychology, Sociology, Economics)</SelectItem>
+                  <SelectItem value="BUSINESS">Business and Professional Studies</SelectItem>
+                  <SelectItem value="HEALTH_SCIENCES">Health and Medical Sciences</SelectItem>
                 </SelectContent>
               </Select>
             </div>

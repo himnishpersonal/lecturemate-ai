@@ -6,6 +6,7 @@ import uvicorn
 from .api.lectures import router as lectures_router
 from .api import folders
 import os
+from app.api import flashcards
 
 app = FastAPI(
     title="LectureMate AI API",
@@ -25,6 +26,7 @@ app.add_middleware(
 # Include routers
 app.include_router(lectures_router, prefix="/api", tags=["lectures"])
 app.include_router(folders.router, prefix="/api")
+app.include_router(flashcards.router, prefix="/api/flashcards", tags=["flashcards"])
 
 # Create uploads directory if it doesn't exist
 os.makedirs("local_uploads", exist_ok=True)

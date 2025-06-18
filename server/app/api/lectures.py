@@ -1,5 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Form
-from ..models.lecture import Lecture, ProcessingStatus
+from ..models.lecture import Lecture
+from ..models.enums import ProcessingStatus, SubjectCategory
 from ..services.storage import storage_service
 from ..services.transcription import transcription_service
 from ..services.notes import notes_service
@@ -35,7 +36,11 @@ async def process_lecture(lecture_id: str):
         # Generate notes from transcript
         print(f"Generating notes for lecture {lecture_id}")
         lecture.status = ProcessingStatus.GENERATING_NOTES
-        notes = await notes_service.generate_notes(transcript, lecture.title)
+        notes = await notes_service.generate_notes(
+            transcript, 
+            lecture.title,
+            lecture.subject_category.value
+        )
         lecture.notes = notes
         print(f"Notes generation completed. Length: {len(notes)} chars")
         
@@ -52,18 +57,25 @@ async def process_lecture(lecture_id: str):
 async def upload_lecture(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    folder_id: str = Form(...),  # Make folder_id required form field
+    folder_id: str = Form(...),
+    subject_category: str = Form(...),  # Make subject_category required
     title: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     user_id: Optional[str] = Form(None)
 ):
     """Upload a new lecture audio file and start processing"""
-    print(f"Received form data - folder_id: {folder_id}, title: {title}")  # Debug log
+    print(f"Received form data - folder_id: {folder_id}, title: {title}, subject_category: {subject_category}")
     
     if not file.content_type.startswith('audio/'):
         raise HTTPException(status_code=400, detail="File must be an audio file")
     
     try:
+        # Validate subject category
+        try:
+            subject_category_enum = SubjectCategory(subject_category)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid subject category")
+            
         # Use a default user_id if none provided
         effective_user_id = user_id or "default_user"
         
@@ -82,6 +94,7 @@ async def upload_lecture(
             "audio_url": audio_url,
             "user_id": effective_user_id,
             "folder_id": folder_id,
+            "subject_category": subject_category_enum,
             "status": ProcessingStatus.PENDING,
             "created_at": current_time,
             "updated_at": current_time,
@@ -89,8 +102,6 @@ async def upload_lecture(
             "transcript": None,
             "notes": None
         }
-        
-        print(f"Creating lecture with data: {lecture_data}")  # Debug log
         
         # Create lecture instance
         lecture = Lecture(**lecture_data)
@@ -104,7 +115,7 @@ async def upload_lecture(
         return lecture
     
     except Exception as e:
-        print(f"Error in upload_lecture: {str(e)}")  # Add logging
+        print(f"Error in upload_lecture: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/lectures/{lecture_id}", response_model=Lecture)

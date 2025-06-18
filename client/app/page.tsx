@@ -10,8 +10,9 @@ import { FolderView } from "@/components/folder-view"
 import { OverviewDashboard } from "@/components/overview-dashboard"
 import { UploadModal } from "@/components/upload-modal"
 import { AppSidebar } from "@/components/app-sidebar"
+import { FlashcardView } from "@/components/flashcard-view"
 
-type View = "overview" | "folders" | "folder" | "lecture" | "search" | "notes"
+type View = "overview" | "folders" | "folder" | "lecture" | "search" | "notes" | "flashcards"
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<View>("overview")
@@ -84,6 +85,7 @@ export default function Home() {
         onFoldersClick={() => setCurrentView("folders")}
         onSearchClick={() => setCurrentView("search")}
         onNotesClick={() => setCurrentView("notes")}
+        onFlashcardsClick={() => setCurrentView("flashcards")}
         currentView={currentView}
       />
       <main className="flex-1 overflow-y-auto">
@@ -103,8 +105,8 @@ export default function Home() {
             lectures={getFolderLectures(selectedFolderId)}
             loading={loading}
             error={error}
-            onLectureSelect={handleLectureSelect}
-            onUploadClick={() => setIsUploadOpen(true)}
+            onLectureSelect={handleLectureSelect} 
+            onUploadClick={() => setIsUploadOpen(true)} 
             onBack={handleBack}
             selectedFolderId={selectedFolderId}
           />
@@ -112,6 +114,8 @@ export default function Home() {
           <SearchLectures onLectureSelect={handleLectureSelect} />
         ) : currentView === "notes" ? (
           <MyNotes onLectureSelect={handleLectureSelect} />
+        ) : currentView === "flashcards" ? (
+          <FlashcardView />
         ) : selectedLecture ? (
           <LectureView lecture={selectedLecture} onBack={handleBack} />
         ) : null}

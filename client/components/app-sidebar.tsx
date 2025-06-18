@@ -26,7 +26,8 @@ interface AppSidebarProps {
   onFoldersClick: () => void
   onSearchClick: () => void
   onNotesClick: () => void
-  currentView: "overview" | "folders" | "folder" | "lecture" | "search" | "notes"
+  onFlashcardsClick: () => void
+  currentView: "overview" | "folders" | "folder" | "lecture" | "search" | "notes" | "flashcards"
 }
 
 export function AppSidebar({
@@ -35,6 +36,7 @@ export function AppSidebar({
   onFoldersClick,
   onSearchClick,
   onNotesClick,
+  onFlashcardsClick,
   currentView,
 }: AppSidebarProps) {
   const { theme, setTheme } = useTheme()
@@ -107,6 +109,12 @@ export function AppSidebar({
                   <span>My Notes</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={onFlashcardsClick} isActive={currentView === "flashcards"} className="w-full">
+                  <Zap className="h-4 w-4" />
+                  <span>Flashcards</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -149,12 +157,6 @@ export function AppSidebar({
           <SidebarGroupLabel>Coming Soon</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton disabled>
-                  <Zap className="h-4 w-4" />
-                  <span>Flashcards</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton disabled>
                   <BookOpen className="h-4 w-4" />
